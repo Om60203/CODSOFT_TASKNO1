@@ -1,32 +1,33 @@
 import DashboardShell from "../../components/DashboardShell";
-const db = require("../../lib/db");
+const { pool, ensureSchema } = require("../../lib/db");
 const { requireUser } = require("../../lib/auth");
 
 export async function getServerSideProps({ req }) {
-  const auth = requireUser(req, ["admin"]);
+  const auth = await requireUser(req, ["admin"]);
   if (auth.redirect) return { redirect: { destination: auth.destination, permanent: false } };
+  await ensureSchema();
 
-  const studentCount = db.prepare("SELECT COUNT(*) as c FROM students").get().c;
-  const teacherCount = db.prepare("SELECT COUNT(*) as c FROM teachers").get().c;
-  const pendingFees = db.prepare("SELECT COUNT(*) as c FROM fees WHERE status = 'Pending'").get().c;
-  const recentAttendance = db
-    .prepare(
-      `SELECT a.id, a.date, a.status, s.name as studentName
-       FROM attendance a JOIN students s ON s.id = a.studentId
-       ORDER BY a.id DESC LIMIT 6`
-    )
-    .all()
-    .map((r) => ({ id: r.id, date: r.date, status: r.status, student: { name: r.studentName } }));
-  const classCounts = db
-    .prepare(`SELECT className, COUNT(*) as count FROM students GROUP BY className ORDER BY className`)
-    .all();
+  const studentCount = (await pool.query("SELECT COUNT(*) as c FROM students")).rows[0].c;
+  const teacherCount = (await pool.query("SELECT COUNT(*) as c FROM teachers")).rows[0].c;
+  const pendingFees = (await pool.query("SELECT COUNT(*) as c FROM fees WHERE status = 'Pending'")).rows[0].c;
+  const recentAttendanceRes = await pool.query(
+    `SELECT a.id, a.date, a.status, s.name as "studentName"
+     FROM attendance a JOIN students s ON s.id = a."studentId"
+     ORDER BY a.id DESC LIMIT 6`
+  );
+  const recentAttendance = recentAttendanceRes.rows.map((r) => ({
+    id: r.id, date: r.date, status: r.status, student: { name: r.studentName },
+  }));
+  const classCountsRes = await pool.query(
+    `SELECT "className", COUNT(*) as count FROM students GROUP BY "className" ORDER BY "className"`
+  );
 
   return {
     props: {
       user: auth.user,
-      stats: { studentCount, teacherCount, pendingFees },
+      stats: { studentCount: Number(studentCount), teacherCount: Number(teacherCount), pendingFees: Number(pendingFees) },
       recentAttendance,
-      classCounts,
+      classCounts: classCountsRes.rows.map((r) => ({ className: r.className, count: Number(r.count) })),
     },
   };
 }

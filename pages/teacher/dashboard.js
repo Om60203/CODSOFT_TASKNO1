@@ -1,22 +1,24 @@
 import DashboardShell from "../../components/DashboardShell";
-const db = require("../../lib/db");
+const { pool, ensureSchema } = require("../../lib/db");
 const { requireUser } = require("../../lib/auth");
 
 export async function getServerSideProps({ req }) {
-  const auth = requireUser(req, ["teacher"]);
+  const auth = await requireUser(req, ["teacher"]);
   if (auth.redirect) return { redirect: { destination: auth.destination, permanent: false } };
+  await ensureSchema();
 
-  const teacher = auth.user.teacherId
-    ? db.prepare("SELECT * FROM teachers WHERE id = ?").get(auth.user.teacherId)
-    : null;
+  let teacher = null;
+  let classStudents = [];
+  if (auth.user.teacherId) {
+    const tRes = await pool.query(`SELECT * FROM teachers WHERE id = $1`, [auth.user.teacherId]);
+    teacher = tRes.rows[0] || null;
+    if (teacher) {
+      const sRes = await pool.query(`SELECT * FROM students WHERE "className" = $1 ORDER BY "rollNo"`, [teacher.className]);
+      classStudents = sRes.rows;
+    }
+  }
 
-  const classStudents = teacher
-    ? db.prepare("SELECT * FROM students WHERE className = ? ORDER BY rollNo").all(teacher.className)
-    : [];
-
-  return {
-    props: { user: auth.user, teacher: teacher || null, classStudents },
-  };
+  return { props: { user: auth.user, teacher, classStudents } };
 }
 
 export default function TeacherDashboard({ user, teacher, classStudents }) {
