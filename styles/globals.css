@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: #101a2e;
+  --brand: #3b4de0;
+  --amber: #e2921f;
+}
+
+html, body {
+  background: #f4f6fb;
+  color: var(--ink);
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #6b7391;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #e6e9f2;
+  border-radius: 14px;
+}
+
+.btn-primary {
+  background: var(--brand);
+  color: white;
+  font-weight: 600;
+  border-radius: 9px;
+  padding: 0.55rem 1.1rem;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+.btn-primary:hover {
+  background: #2e3bc4;
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  border: 1px solid #d7dcec;
+  color: var(--ink);
+  border-radius: 9px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  transition: background 0.12s ease;
+}
+.btn-ghost:hover {
+  background: #eef1fb;
+}
+
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+table.data-table th {
+  text-align: left;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6b7391;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e6e9f2;
+}
+table.data-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f0f2f8;
+}
+table.data-table tr:hover td {
+  background: #f8f9fd;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.badge-green { background: #e3f5e8; color: #1e7a3d; }
+.badge-amber { background: #fdf0dd; color: #a56412; }
+.badge-red { background: #fbe4e4; color: #b23434; }
+.badge-blue { background: #e6eaff; color: #2e3bc4; }
