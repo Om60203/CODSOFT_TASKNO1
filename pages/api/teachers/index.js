@@ -1,9 +1,11 @@
-const db = require("../../../lib/db");
+const { pool, ensureSchema } = require("../../../lib/db");
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
+  await ensureSchema();
+
   if (req.method === "GET") {
-    const teachers = db.prepare("SELECT * FROM teachers ORDER BY id DESC").all();
-    return res.status(200).json(teachers);
+    const { rows } = await pool.query("SELECT * FROM teachers ORDER BY id DESC");
+    return res.status(200).json(rows);
   }
 
   if (req.method === "POST") {
@@ -11,11 +13,11 @@ export default function handler(req, res) {
     if (!name || !subject || !className) {
       return res.status(400).json({ error: "name, subject, and className are required" });
     }
-    const info = db
-      .prepare(`INSERT INTO teachers (name, subject, email, phone, className) VALUES (?, ?, ?, ?, ?)`)
-      .run(name, subject, email || "", phone || "", className);
-    const teacher = db.prepare("SELECT * FROM teachers WHERE id = ?").get(info.lastInsertRowid);
-    return res.status(201).json(teacher);
+    const { rows } = await pool.query(
+      `INSERT INTO teachers (name, subject, email, phone, "className") VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+      [name, subject, email || "", phone || "", className]
+    );
+    return res.status(201).json(rows[0]);
   }
 
   res.setHeader("Allow", ["GET", "POST"]);

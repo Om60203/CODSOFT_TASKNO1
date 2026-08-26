@@ -1,27 +1,23 @@
 import DashboardShell from "../../components/DashboardShell";
-const db = require("../../lib/db");
+const { pool, ensureSchema } = require("../../lib/db");
 const { requireUser } = require("../../lib/auth");
 
 export async function getServerSideProps({ req }) {
-  const auth = requireUser(req, ["student"]);
+  const auth = await requireUser(req, ["student"]);
   if (auth.redirect) return { redirect: { destination: auth.destination, permanent: false } };
+  await ensureSchema();
 
   const studentId = auth.user.studentId;
-  const student = studentId ? db.prepare("SELECT * FROM students WHERE id = ?").get(studentId) : null;
+  let student = null, attendance = [], fees = [], exams = [];
 
-  const attendance = studentId
-    ? db.prepare("SELECT * FROM attendance WHERE studentId = ? ORDER BY date DESC").all(studentId)
-    : [];
-  const fees = studentId
-    ? db.prepare("SELECT * FROM fees WHERE studentId = ? ORDER BY id DESC").all(studentId)
-    : [];
-  const exams = studentId
-    ? db.prepare("SELECT * FROM exam_results WHERE studentId = ? ORDER BY id DESC").all(studentId)
-    : [];
+  if (studentId) {
+    student = (await pool.query(`SELECT * FROM students WHERE id = $1`, [studentId])).rows[0] || null;
+    attendance = (await pool.query(`SELECT * FROM attendance WHERE "studentId" = $1 ORDER BY date DESC`, [studentId])).rows;
+    fees = (await pool.query(`SELECT * FROM fees WHERE "studentId" = $1 ORDER BY id DESC`, [studentId])).rows;
+    exams = (await pool.query(`SELECT * FROM exam_results WHERE "studentId" = $1 ORDER BY id DESC`, [studentId])).rows;
+  }
 
-  return {
-    props: { user: auth.user, student: student || null, attendance, fees, exams },
-  };
+  return { props: { user: auth.user, student, attendance, fees, exams } };
 }
 
 export default function StudentDashboard({ user, student, attendance, fees, exams }) {
@@ -77,7 +73,7 @@ export default function StudentDashboard({ user, student, attendance, fees, exam
               <div className="space-y-2">
                 {fees.map((f) => (
                   <div key={f.id} className="flex justify-between text-sm border-b border-[#f0f2f8] pb-2 last:border-0">
-                    <span>{f.term} — ₹{f.amount.toLocaleString("en-IN")}</span>
+                    <span>{f.term} — ₹{Number(f.amount).toLocaleString("en-IN")}</span>
                     <span className={`badge ${f.status === "Paid" ? "badge-green" : "badge-amber"}`}>{f.status}</span>
                   </div>
                 ))}

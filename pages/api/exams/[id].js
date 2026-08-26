@@ -1,10 +1,11 @@
-const db = require("../../../lib/db");
+const { pool, ensureSchema } = require("../../../lib/db");
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
+  await ensureSchema();
   const id = Number(req.query.id);
 
   if (req.method === "DELETE") {
-    db.prepare("DELETE FROM exam_results WHERE id = ?").run(id);
+    await pool.query("DELETE FROM exam_results WHERE id = $1", [id]);
     return res.status(204).end();
   }
 

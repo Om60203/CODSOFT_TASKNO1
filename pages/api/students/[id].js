@@ -1,19 +1,20 @@
-const db = require("../../../lib/db");
+const { pool, ensureSchema } = require("../../../lib/db");
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
+  await ensureSchema();
   const id = Number(req.query.id);
 
   if (req.method === "PUT") {
     const { name, rollNo, className, section, email, phone, guardian } = req.body;
-    db.prepare(
-      `UPDATE students SET name=?, rollNo=?, className=?, section=?, email=?, phone=?, guardian=? WHERE id=?`
-    ).run(name, rollNo, className, section, email || "", phone || "", guardian || "", id);
-    const student = db.prepare("SELECT * FROM students WHERE id = ?").get(id);
-    return res.status(200).json(student);
+    const { rows } = await pool.query(
+      `UPDATE students SET name=$1, "rollNo"=$2, "className"=$3, section=$4, email=$5, phone=$6, guardian=$7 WHERE id=$8 RETURNING *`,
+      [name, rollNo, className, section, email || "", phone || "", guardian || "", id]
+    );
+    return res.status(200).json(rows[0]);
   }
 
   if (req.method === "DELETE") {
-    db.prepare("DELETE FROM students WHERE id = ?").run(id);
+    await pool.query("DELETE FROM students WHERE id = $1", [id]);
     return res.status(204).end();
   }
 

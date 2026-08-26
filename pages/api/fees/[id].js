@@ -1,17 +1,17 @@
-const db = require("../../../lib/db");
+const { pool, ensureSchema } = require("../../../lib/db");
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
+  await ensureSchema();
   const id = Number(req.query.id);
 
   if (req.method === "PUT") {
     const { status } = req.body;
-    db.prepare("UPDATE fees SET status = ? WHERE id = ?").run(status, id);
-    const fee = db.prepare("SELECT * FROM fees WHERE id = ?").get(id);
-    return res.status(200).json(fee);
+    const { rows } = await pool.query(`UPDATE fees SET status = $1 WHERE id = $2 RETURNING *`, [status, id]);
+    return res.status(200).json(rows[0]);
   }
 
   if (req.method === "DELETE") {
-    db.prepare("DELETE FROM fees WHERE id = ?").run(id);
+    await pool.query("DELETE FROM fees WHERE id = $1", [id]);
     return res.status(204).end();
   }
 

@@ -1,9 +1,11 @@
-const db = require("../../../lib/db");
+const { pool, ensureSchema } = require("../../../lib/db");
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
+  await ensureSchema();
+
   if (req.method === "GET") {
-    const students = db.prepare("SELECT * FROM students ORDER BY id DESC").all();
-    return res.status(200).json(students);
+    const { rows } = await pool.query("SELECT * FROM students ORDER BY id DESC");
+    return res.status(200).json(rows);
   }
 
   if (req.method === "POST") {
@@ -12,13 +14,11 @@ export default function handler(req, res) {
       return res.status(400).json({ error: "name, rollNo, className, and section are required" });
     }
     try {
-      const info = db
-        .prepare(
-          `INSERT INTO students (name, rollNo, className, section, email, phone, guardian) VALUES (?, ?, ?, ?, ?, ?, ?)`
-        )
-        .run(name, rollNo, className, section, email || "", phone || "", guardian || "");
-      const student = db.prepare("SELECT * FROM students WHERE id = ?").get(info.lastInsertRowid);
-      return res.status(201).json(student);
+      const { rows } = await pool.query(
+        `INSERT INTO students (name, "rollNo", "className", section, email, phone, guardian) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+        [name, rollNo, className, section, email || "", phone || "", guardian || ""]
+      );
+      return res.status(201).json(rows[0]);
     } catch (e) {
       return res.status(400).json({ error: "Roll number already exists" });
     }
